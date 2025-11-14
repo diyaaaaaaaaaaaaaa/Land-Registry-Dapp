@@ -54,6 +54,10 @@ export function buildEntryFunctionPayload(
     type: "entry_function_payload",
     function: `${moduleAddress}::${moduleName}::${fnName}`,
     type_arguments: typeArgs,
-    arguments: args,
-  };
+    arguments: args.map(arg =>
+      typeof arg === "number" ? arg.toString() : arg
+    ),
+  // send raw number, not string
+  } as Types.TransactionPayload;
 }
+

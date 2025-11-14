@@ -39,60 +39,88 @@ const AddLandPage = () => {
     setStep((s) => Math.max(1, s - 1));
   };
 
-  const handleSubmit = async () => {
-    // Basic validation
-    if (!formData.fullName || !formData.khasraNumber || !formData.district) {
-      toast({ title: "Missing fields", description: "Please fill required fields." });
-      return;
-    }
+const handleSubmit = async () => {
+  if (!formData.fullName || !formData.khasraNumber || !formData.district) {
+    toast({ title: "Missing fields", description: "Please fill required fields." });
+    return;
+  }
 
-    // Call blockchain submit (best-effort). If wallet missing or tx fails, we still add to local store.
-    try {
-      toast({ title: "Submitting", description: "Sending transaction to blockchain...", variant: "default" });
+  // --- WALLET CHECK ---
+  const wallet =
+    (window as any).aptos ||
+    (window as any).petra ||
+    (window as any).martian ||
+    null;
 
-      // map to contract parameter names
-      await submitOnChain({
-        khasra_number: formData.khasraNumber,
-        document_cid: formData.documentCID || "",
-        area_sqm: Number(formData.area) || 0,
-        notes: formData.notes || "",
-        village: formData.village || "",
-        tehsil: formData.tehsil || "",
-        district: formData.district || "",
-      });
-
-      // If we reach here, tx was submitted successfully
-      toast({ title: "✅ Submitted on-chain", description: "Your land claim transaction was sent. It may take a short while to be confirmed." });
-    } catch (err) {
-      // show warning but continue
-      toast({
-        title: "⚠️ Blockchain submit failed",
-        description: (err as Error).message || "Could not send transaction. Saving locally.",
-        variant: "destructive",
-      });
-    }
-
-    // Always add to local context so UI updates instantly (mock wallet used earlier)
-    const newParcelId = addParcel({
-      khasraNumber: formData.khasraNumber,
-      ownerName: formData.fullName,
-      ownerWallet: "0x" + Math.random().toString(16).substring(2, 20),
-      district: formData.district,
-      tehsil: formData.tehsil,
-      village: formData.village,
-      area: Number(formData.area) || 0,
-      status: "pending",
-      documentCID: formData.documentCID || undefined,
-      notes: formData.notes || undefined,
+  if (!wallet) {
+    toast({
+      title: "Wallet not found",
+      description: "Install Petra or Martian wallet to submit on-chain.",
+      variant: "destructive",
     });
+    return;
+  }
+
+  try {
+    await wallet.connect();
+  } catch {
+    toast({
+      title: "Wallet connection failed",
+      description: "Please unlock your wallet or approve the request.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // --- ON-CHAIN SUBMIT ---
+  try {
+    toast({ title: "Submitting", description: "Sending transaction to blockchain..." });
+
+    await submitOnChain({
+  khasra_number: formData.khasraNumber || "",
+  document_cid: formData.documentCID || "",
+  area_sqm: Number(formData.area) || 0,
+  notes: formData.notes || "",
+  village: formData.village || "",
+  tehsil: formData.tehsil || "",
+  district: formData.district || "",
+});
+
 
     toast({
-      title: "✅ Success!",
-      description: `Your land claim has been submitted! Parcel ID: #${newParcelId}. Status: ⏳ PENDING`,
+      title: "Submitted on-chain",
+      description: "Transaction sent successfully.",
     });
+  } catch (err) {
+    toast({
+      title: "Blockchain error",
+      description: (err as Error).message,
+      variant: "destructive",
+    });
+  }
 
-    navigate("/my-lands");
-  };
+  // always add locally
+  const newParcelId = addParcel({
+    khasraNumber: formData.khasraNumber,
+    ownerName: formData.fullName,
+    ownerWallet: wallet.address || "0x",
+    district: formData.district,
+    tehsil: formData.tehsil,
+    village: formData.village,
+    area: Number(formData.area) || 0,
+    status: "pending",
+    documentCID: formData.documentCID || undefined,
+    notes: formData.notes || undefined,
+  });
+
+  toast({
+    title: "Success",
+    description: `Parcel submitted! ID: ${newParcelId}`,
+  });
+
+  navigate("/my-lands");
+};
+
 
   return (
     <div className="min-h-screen tribal-pattern">

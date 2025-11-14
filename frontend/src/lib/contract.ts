@@ -50,7 +50,7 @@ export async function submitLand(sender: string, args: any) {
   });
 }
 
-export async function approve(sender: string, parcelId: number) {
+export async function approve(sender: string, parcelId: any) {
   const payload: InputTransactionData = {
     data: {
       function: `${MODULE}::approve`,

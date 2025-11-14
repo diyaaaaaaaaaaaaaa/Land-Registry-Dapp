@@ -111,7 +111,7 @@ export function useContract() {
         [
           params.khasra_number,
           params.document_cid,
-          String(params.area_sqm),
+          params.area_sqm,
           params.notes,
           params.village,
           params.tehsil,
